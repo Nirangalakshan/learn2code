@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import Editor from "@monaco-editor/react";
 
 export default function LessonPage() {
   const [code, setCode] = useState(`name = "Alex"
@@ -24,12 +25,34 @@ print("Hello " + name)`);
   const [showHint, setShowHint] = useState(false);
 
   const handleRun = () => {
-    // Simulating running code
-    if (code.includes('print("Hello " + name)')) {
-      setOutput("Hello Alex");
-      setStatus("success");
-    } else {
-      setOutput("SyntaxError: Unexpected token");
+    // Simulating running code by parsing the string
+    // This is a naive implementation for this specific lesson
+    try {
+      // Extract the name variable value using regex
+      // Matches: name = "Value" or name = 'Value'
+      const nameMatch = code.match(/name\s*=\s*["']([^"']+)["']/);
+      const printMatch = code.match(/print\s*\(\s*"Hello "\s*\+\s*name\s*\)/);
+
+      if (nameMatch && printMatch) {
+        const extractedName = nameMatch[1];
+        setOutput(`Hello ${extractedName}`);
+        setStatus("success");
+      } else if (!nameMatch) {
+        setOutput(
+          "NameError: name is not defined. Make sure you created the variable 'name'.",
+        );
+        setStatus("error");
+      } else if (!printMatch) {
+        setOutput(
+          'SyntaxError: Make sure you use exactly: print("Hello " + name)',
+        );
+        setStatus("error");
+      } else {
+        setOutput("SyntaxError: Unexpected token");
+        setStatus("error");
+      }
+    } catch (err) {
+      setOutput("RuntimeError: Something went wrong");
       setStatus("error");
     }
   };
@@ -73,7 +96,7 @@ print("Hello " + name)`);
                   "w-6 h-1 rounded-full",
                   i <= step
                     ? "bg-gray-900 dark:bg-white"
-                    : "bg-gray-200 dark:bg-gray-800"
+                    : "bg-gray-200 dark:bg-gray-800",
                 )}
               />
             ))}
@@ -193,12 +216,22 @@ print("Hello " + name)`);
           </div>
 
           {/* Code Area */}
-          <div className="flex-1 p-4 font-mono text-sm relative">
-            <textarea
+          <div className="flex-1 font-mono text-sm relative">
+            <Editor
+              height="100%"
+              defaultLanguage="python"
+              theme="vs-dark"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-transparent text-gray-300 resize-none focus:outline-none font-mono leading-relaxed"
-              spellCheck={false}
+              onChange={(value) => setCode(value || "")}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                padding: { top: 16, bottom: 16 },
+                fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+              }}
             />
           </div>
 
@@ -214,7 +247,7 @@ print("Hello " + name)`);
                     "h-5 text-[10px] px-2 border-0",
                     status === "success"
                       ? "bg-gray-800 text-white"
-                      : "bg-red-900/50 text-red-400"
+                      : "bg-red-900/50 text-red-400",
                   )}
                 >
                   {status === "success" ? "Passed" : "Failed"}

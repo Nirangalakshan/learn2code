@@ -2,323 +2,328 @@
 
 import Link from "next/link";
 import {
-  Flame,
-  Target,
-  Trophy,
-  BookOpen,
   Code2,
-  PlayCircle,
-  Clock,
+  Sparkles,
+  Zap,
+  Trophy,
+  History,
+  TrendingUp,
+  ArrowRight,
+  Terminal,
+  Cpu,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+type SessionCardProps = {
+  title: string;
+  lang: string;
+  difficulty: string;
+  score: string;
+  time: string;
+  active?: boolean;
+};
+
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
-      {/* Sidebar - Simplified for Mockup */}
-      <aside className="w-16 lg:w-60 fixed h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-40 hidden md:flex flex-col items-center lg:items-stretch py-6 px-3 lg:px-4">
-        <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center">
-            <Code2 className="w-4 h-4 text-white dark:text-gray-900" />
-          </div>
-          <span className="font-semibold text-lg hidden lg:block text-gray-900 dark:text-white">
-            Learn2Code
-          </span>
-        </div>
-
-        <nav className="space-y-1 flex-1 w-full">
-          <SidebarItem icon={<BookOpen />} label="Dashboard" active />
-          <SidebarItem icon={<Target />} label="Curriculum" />
-          <SidebarItem icon={<Code2 />} label="Playground" />
-          <SidebarItem icon={<Trophy />} label="Achievements" />
-        </nav>
-
-        <div className="mt-auto hidden lg:block">
-          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-xl">
-            <p className="font-medium text-sm mb-1 text-gray-900 dark:text-white">
-              Pro Plan
-            </p>
-            <p className="text-xs text-gray-500 mb-3">Unlock all challenges</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-            >
-              Upgrade
-            </Button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 ml-0 md:ml-16 lg:ml-60 p-6 lg:p-8">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              Welcome back, Alex
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Let&apos;s continue your coding adventure
-            </p>
-          </div>
-
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
+      {/* Navbar */}
+      <nav className="border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-              <Flame className="w-4 h-4 text-gray-900 dark:text-white" />
-              <span className="font-medium text-sm">12 days</span>
+            <div className="w-8 h-8 rounded-lg bg-linear-to-tr from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Code2 className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-              <Trophy className="w-4 h-4 text-gray-900 dark:text-white" />
-              <span className="font-medium text-sm">2,450 XP</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Progress Section */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-none bg-gray-900 dark:bg-gray-900 text-white overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                  <div>
-                    <Badge className="mb-2 bg-white/10 text-white border-0 hover:bg-white/20">
-                      Current Course
-                    </Badge>
-                    <h2 className="text-2xl font-semibold mb-1">
-                      Intro to Python
-                    </h2>
-                    <p className="text-gray-400 text-sm">
-                      Section 3: Variables & Data Types
-                    </p>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="w-16 h-16 rounded-full border-2 border-white flex items-center justify-center font-semibold text-lg">
-                      75%
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm text-gray-400">
-                    <span>Progress</span>
-                    <span>12/16 Lessons</span>
-                  </div>
-                  <Progress value={75} className="h-2 bg-gray-800" />
-
-                  <div className="pt-3">
-                    <Link href="/lesson/python-101">
-                      <Button className="bg-white text-gray-900 hover:bg-gray-100 font-medium">
-                        Continue Learning{" "}
-                        <PlayCircle className="ml-2 w-4 h-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  Up Next
-                </h3>
-                <Link
-                  href="#"
-                  className="text-gray-500 hover:text-gray-900 dark:hover:text-white text-sm transition-colors"
-                >
-                  View All
-                </Link>
-              </div>
-              <div className="space-y-3">
-                <LessonCard
-                  title="Understanding Loops"
-                  topic="Logic & Control Flow"
-                  duration="15 min"
-                  status="locked"
-                />
-                <LessonCard
-                  title="Fun with Functions"
-                  topic="Code Structure"
-                  duration="20 min"
-                  status="locked"
-                />
-              </div>
-            </div>
+            <span className="font-bold text-lg tracking-tight">Learn2Code</span>
           </div>
 
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Stats */}
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-none">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">
-                  Your Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3">
-                <StatItem
-                  label="Lessons"
-                  value="24"
-                  icon={<BookOpen className="w-4 h-4" />}
-                />
-                <StatItem
-                  label="Projects"
-                  value="3"
-                  icon={<Code2 className="w-4 h-4" />}
-                />
-                <StatItem
-                  label="Level"
-                  value="5"
-                  icon={<Trophy className="w-4 h-4" />}
-                />
-                <StatItem
-                  label="Hours"
-                  value="12"
-                  icon={<Clock className="w-4 h-4" />}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Badges */}
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-none">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base font-medium">
-                  Recent Badges
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  <BadgeItem icon="🐍" name="Python Init" />
-                  <BadgeItem icon="🐛" name="Bug Hunter" />
-                  <BadgeItem icon="🚀" name="First Launch" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Daily Challenge */}
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-none bg-white dark:bg-gray-900">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-0 hover:bg-gray-200 dark:hover:bg-gray-700">
-                    Daily Challenge
-                  </Badge>
-                  <Clock className="w-4 h-4 text-gray-400" />
-                </div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Fix the Bug
-                </h3>
-                <p className="text-gray-500 text-sm mb-4">
-                  Find the error in the calculation function.
-                </p>
-                <Button className="w-full bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white">
-                  Start Challenge
-                </Button>
-              </CardContent>
-            </Card>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
+              <Link href="#" className="text-white">
+                Dashboard
+              </Link>
+              <Link
+                href="/practice"
+                className="hover:text-white transition-colors"
+              >
+                Practice
+              </Link>
+              <Link href="#" className="hover:text-white transition-colors">
+                History
+              </Link>
+            </div>
+            <div className="h-4 w-px bg-slate-800 hidden md:block" />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-400">Alexa D.</span>
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+                <span className="text-xs font-bold text-indigo-400">AD</span>
+              </div>
+            </div>
           </div>
         </div>
+      </nav>
+
+      <main className="max-w-8/9 mx-auto px-6 py-10 space-y-12">
+        {/* Welcome Hero */}
+        <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950/20 p-8 md:p-12">
+          <div className="relative z-10 max-w-2xl space-y-6">
+            <Badge
+              variant="secondary"
+              className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-3 py-1"
+            >
+              <Sparkles className="w-3 h-3 mr-2" />
+              New: AI Interviewer 2.0
+            </Badge>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              Ready to master your <br />
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-violet-400">
+                next technical interview?
+              </span>
+            </h1>
+            <p className="text-lg text-slate-400 max-w-lg leading-relaxed">
+              Practice with our advanced AI tutor. Get real-time feedback,
+              hint-based learning, and adaptive difficulty levels.
+            </p>
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Link href="/practice">
+                <Button
+                  size="lg"
+                  className="h-12 px-8 rounded-full bg-white text-slate-950 hover:bg-slate-200 font-bold text-base shadow-xl shadow-white/5 transition-all hover:scale-105"
+                >
+                  Start Practice Session
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 px-8 rounded-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                View Past Performance
+              </Button>
+            </div>
+          </div>
+
+          {/* Decorative Background Elements */}
+          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
+          <div className="absolute bottom-0 right-20 w-80 h-80 bg-violet-500/10 blur-[80px] rounded-full pointer-events-none" />
+          <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden lg:block opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+            <Terminal className="w-64 h-64 text-slate-800" />
+          </div>
+        </section>
+
+        {/* Stats Grid */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            label="Current Streak"
+            value="12 Days"
+            icon={<Zap className="w-5 h-5 text-yellow-400" />}
+            trend="+2 from last week"
+          />
+          <StatCard
+            label="Questions Solved"
+            value="143"
+            icon={<Code2 className="w-5 h-5 text-blue-400" />}
+            trend="Top 5% of users"
+          />
+          <StatCard
+            label="XP Earned"
+            value="12,450"
+            icon={<Trophy className="w-5 h-5 text-purple-400" />}
+            trend="Level 15 Master"
+          />
+          <StatCard
+            label="Accuracy Rate"
+            value="87%"
+            icon={<TrendingUp className="w-5 h-5 text-green-400" />}
+            trend="+1.5% improvement"
+          />
+        </section>
+
+        {/* Recent Sections similar to Bento Grid */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Activity */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <History className="w-5 h-5 text-slate-500" />
+                Recent Sessions
+              </h2>
+              <Button
+                variant="outline"
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                View All
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <SessionCard
+                title="React Hooks Implementation"
+                lang="TypeScript"
+                difficulty="Medium"
+                score="95/100"
+                time="2h ago"
+              />
+              <SessionCard
+                title="Binary Tree Traversal"
+                lang="Python"
+                difficulty="Hard"
+                score="In Progress"
+                time="5h ago"
+                active
+              />
+              <SessionCard
+                title="Array Manipulation Basics"
+                lang="JavaScript"
+                difficulty="Easy"
+                score="100/100"
+                time="Yesterday"
+              />
+            </div>
+          </div>
+
+          {/* Recommended */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Cpu className="w-5 h-5 text-slate-500" />
+              Recommended for You
+            </h2>
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-6">
+              <div className="space-y-2">
+                <Badge className="bg-orange-500/10 text-orange-400 border-0">
+                  Weak Spot Detected
+                </Badge>
+                <h3 className="font-semibold text-lg">Dynamic Programming</h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  It looks like you struggled with the last DP problem. Lets
+                  practice memoization techniques.
+                </p>
+              </div>
+
+              <Link href="/practice">
+                <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700">
+                  Start DP Challenge
+                </Button>
+              </Link>
+            </div>
+
+            <div className="bg-linear-to-br from-indigo-900/20 to-purple-900/20 border border-indigo-500/10 rounded-2xl p-6 relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="font-semibold text-lg mb-2">
+                  Join the Weekly Contest
+                </h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Compete with others and win exclusive badges.
+                </p>
+                <Button
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                >
+                  View Details
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
 }
 
-function SidebarItem({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={cn(
-        "w-full flex items-center justify-center lg:justify-start gap-3 p-2.5 lg:px-3 rounded-lg transition-colors",
-        active
-          ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium"
-          : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-      )}
-    >
-      <div className="w-5 h-5">{icon}</div>
-      <span className="hidden lg:block text-sm">{label}</span>
-    </button>
-  );
-}
-
-function LessonCard({
-  title,
-  topic,
-  duration,
-  status,
-}: {
-  title: string;
-  topic: string;
-  duration: string;
-  status?: string;
-}) {
-  return (
-    <Card className="border border-gray-200 dark:border-gray-800 shadow-none hover:border-gray-300 dark:hover:border-gray-700 transition-colors cursor-pointer">
-      <CardContent className="p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400">
-            <PlayCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-              {title}
-            </h4>
-            <p className="text-xs text-gray-500">{topic}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <span className="text-xs text-gray-400 block mb-1">{duration}</span>
-          {status === "locked" && (
-            <Badge className="text-[10px] h-5 px-2 bg-gray-100 dark:bg-gray-800 text-gray-500 border-0">
-              Locked
-            </Badge>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function StatItem({
-  icon,
+function StatCard({
   label,
   value,
+  icon,
+  trend,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: string;
+  icon: React.ReactNode;
+  trend: string;
 }) {
   return (
-    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-      <div className="flex items-center gap-2 mb-1.5 text-gray-500">
-        {icon}
-        <span className="text-xs font-medium">{label}</span>
+    <div className="bg-slate-900/50 border border-slate-800 p-5 rounded-2xl hover:border-slate-700 transition-colors group">
+      <div className="flex justify-between items-start mb-4">
+        <div className="p-2 bg-slate-800 rounded-lg group-hover:scale-110 transition-transform duration-300">
+          {icon}
+        </div>
       </div>
-      <p className="font-semibold text-lg text-gray-900 dark:text-white">
-        {value}
-      </p>
+      <div className="space-y-1">
+        <p className="text-slate-500 text-sm font-medium">{label}</p>
+        <h3 className="text-2xl font-bold text-white">{value}</h3>
+        <p className="text-xs text-indigo-400/80 font-medium pt-1">{trend}</p>
+      </div>
     </div>
   );
 }
 
-function BadgeItem({ icon, name }: { icon: string; name: string }) {
+function SessionCard({
+  title,
+  lang,
+  difficulty,
+  score,
+  time,
+  active,
+}: SessionCardProps) {
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-      <span className="text-sm">{icon}</span>
-      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-        {name}
-      </span>
+    <div
+      className={cn(
+        "flex items-center justify-between p-5 rounded-2xl border transition-all",
+        active
+          ? "bg-indigo-500/5 border-indigo-500/20 shadow-lg shadow-indigo-900/10"
+          : "bg-slate-900/50 border-slate-800 hover:border-slate-700",
+      )}
+    >
+      <div className="flex items-center gap-4">
+        <div
+          className={cn(
+            "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg",
+            lang === "Python"
+              ? "bg-blue-500/10 text-blue-400"
+              : lang === "TypeScript"
+                ? "bg-blue-600/10 text-blue-500"
+                : "bg-yellow-400/10 text-yellow-400",
+          )}
+        >
+          {lang === "Python" ? "Py" : lang === "TypeScript" ? "TS" : "JS"}
+        </div>
+        <div>
+          <h4 className="font-semibold text-slate-200">{title}</h4>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] h-5 px-1.5 border",
+                difficulty === "Easy"
+                  ? "border-green-800 text-green-400 bg-green-900/10"
+                  : difficulty === "Medium"
+                    ? "border-yellow-800 text-yellow-400 bg-yellow-900/10"
+                    : "border-red-800 text-red-400 bg-red-900/10",
+              )}
+            >
+              {difficulty}
+            </Badge>
+            <span className="text-xs text-slate-500">• {time}</span>
+          </div>
+        </div>
+      </div>
+      <div className="text-right">
+        <span
+          className={cn(
+            "text-sm font-bold block",
+            active ? "text-indigo-400" : "text-white",
+          )}
+        >
+          {score}
+        </span>
+        {active && (
+          <span className="text-[10px] text-indigo-400/70 uppercase tracking-wider font-bold animate-pulse">
+            Running
+          </span>
+        )}
+      </div>
     </div>
   );
 }

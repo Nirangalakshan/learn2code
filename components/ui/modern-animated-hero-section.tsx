@@ -3,7 +3,8 @@
 import type React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { MoveRight, Code2 } from "lucide-react";
+import Image from "next/image";
+import { MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Character {
@@ -137,9 +138,13 @@ const Navbar: React.FC = () => {
   return (
     <nav className="absolute top-0 left-0 right-0 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-50">
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-          <Code2 className="text-emerald-400 w-5 h-5" />
-        </div>
+        <Image
+          src="/images/learn2code_logo.png"
+          alt="Learn2Code Logo"
+          width={80}
+          height={80}
+          className="w-20 h-20 object-contain rounded-lg"
+        />
         <span className="text-xl font-semibold text-white">Learn2Code</span>
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
