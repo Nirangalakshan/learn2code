@@ -3,31 +3,75 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Code2, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
+import {
+  Code2,
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  ArrowLeft,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // TODO: Implement actual login logic with your auth provider
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
       router.push("/dashboard");
-    }, 1500);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: "google" | "github") => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(`Failed to sign in with ${provider}`);
+    }
   };
 
   return (
@@ -75,6 +119,20 @@ export default function LoginPage() {
           </CardHeader>
 
           <CardContent className="space-y-5 pt-2">
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Field */}
               <div className="space-y-1.5">
@@ -177,7 +235,10 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
+                type="button"
+                onClick={() => handleSocialLogin("google")}
                 className="h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 font-normal transition-colors"
+                disabled={isLoading}
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                   <path
@@ -201,7 +262,10 @@ export default function LoginPage() {
               </Button>
               <Button
                 variant="outline"
+                type="button"
+                onClick={() => handleSocialLogin("github")}
                 className="h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 font-normal transition-colors"
+                disabled={isLoading}
               >
                 <svg
                   className="w-4 h-4 mr-2"
@@ -218,7 +282,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-gray-500 dark:text-gray-400">
               Don&apos;t have an account?{" "}
               <Link
-                href="/onboarding"
+                href="/signup"
                 className="text-gray-900 dark:text-white hover:underline font-medium"
               >
                 Sign up

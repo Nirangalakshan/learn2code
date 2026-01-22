@@ -1,46 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Code2,
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  User,
-  ArrowLeft,
-  Check,
-} from "lucide-react";
+import { Code2, Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const pathLabels: Record<string, string> = {
-  kids: "Just for Fun (11–13)",
-  students: "School & Future (14–17)",
-  adults: "Career Switch (18+)",
-};
+import { createClient } from "@/lib/supabase/client";
+import { AlertCircle } from "lucide-react";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Get initial path from URL params
-  const pathParam = searchParams.get("path");
-  const selectedPath = pathParam && pathLabels[pathParam] ? pathParam : null;
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const supabase = createClient();
 
   const passwordStrength = () => {
     const password = formData.password;
@@ -66,12 +51,57 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // TODO: Implement actual signup logic with your auth provider
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      if (data.user && data.session) {
+        // User is signed in immediately (depends on Supabase settings)
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        // Confirmation email sent
+        setSuccess(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
       setIsLoading(false);
-      router.push("/dashboard");
-    }, 1500);
+    }
+  };
+
+  const handleSocialLogin = async (provider: "google" | "github") => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(`Failed to sign up with ${provider}`);
+    }
   };
 
   const strength = passwordStrength();
@@ -84,7 +114,7 @@ export default function SignUpPage() {
         animate={{ opacity: 1, x: 0 }}
         className="absolute top-6 left-6"
       >
-        <Link href="/onboarding">
+        <Link href="/">
           <Button
             variant="ghost"
             className="gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
@@ -118,160 +148,191 @@ export default function SignUpPage() {
                 Start learning to code today
               </p>
             </div>
-
-            {/* Selected Path Badge */}
-            {selectedPath && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium mx-auto"
-              >
-                <Check className="w-3 h-3" />
-                {pathLabels[selectedPath]}
-              </motion.div>
-            )}
           </CardHeader>
 
           <CardContent className="space-y-5 pt-2">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name Field */}
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="name"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-sm text-red-600 dark:text-red-400"
                 >
-                  Full Name
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="John Doe"
-                    className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-0 transition-colors"
-                    value={formData.name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </motion.div>
+              )}
 
-              {/* Email Field */}
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              {success ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-center space-y-3"
                 >
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-0 transition-colors"
-                    value={formData.email}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="password"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="pl-10 pr-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-0 transition-colors"
-                    value={formData.password}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto text-green-600 dark:text-green-400">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-green-900 dark:text-green-100">
+                      Check your email
+                    </h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      We&apos;ve sent a confirmation link to {formData.email}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full text-xs h-9"
+                    onClick={() => setSuccess(false)}
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Password Strength Indicator */}
-                {formData.password.length > 0 && (
-                  <div className="space-y-1 pt-1">
-                    <div className="flex gap-1">
-                      {[1, 2, 3].map((level) => (
-                        <div
-                          key={level}
-                          className={cn(
-                            "h-1 flex-1 rounded-full transition-colors",
-                            strength.strength >= level
-                              ? strength.color
-                              : "bg-gray-200 dark:bg-gray-700"
-                          )}
-                        />
-                      ))}
+                    Back to sign up
+                  </Button>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Name Field */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="name"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Full Name
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="John Doe"
+                        className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-0 transition-colors"
+                        value={formData.name}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        required
+                      />
                     </div>
-                    <p className="text-xs text-gray-500">{strength.label}</p>
                   </div>
-                )}
-              </div>
 
-              {/* Terms */}
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                By creating an account, you agree to our{" "}
-                <Link
-                  href="/terms"
-                  className="text-gray-700 dark:text-gray-300 hover:underline"
-                >
-                  Terms
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="/privacy"
-                  className="text-gray-700 dark:text-gray-300 hover:underline"
-                >
-                  Privacy Policy
-                </Link>
-              </p>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full h-11 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white font-medium transition-colors"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 dark:border-gray-900/30 border-t-white dark:border-t-gray-900 rounded-full animate-spin" />
-                    Creating account...
+                  {/* Email Field */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Email
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-0 transition-colors"
+                        value={formData.email}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
                   </div>
-                ) : (
-                  "Create account"
-                )}
-              </Button>
-            </form>
+
+                  {/* Password Field */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="password"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-0 transition-colors"
+                        value={formData.password}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Password Strength Indicator */}
+                    {formData.password.length > 0 && (
+                      <div className="space-y-1 pt-1">
+                        <div className="flex gap-1">
+                          {[1, 2, 3].map((level) => (
+                            <div
+                              key={level}
+                              className={cn(
+                                "h-1 flex-1 rounded-full transition-colors",
+                                strength.strength >= level
+                                  ? strength.color
+                                  : "bg-gray-200 dark:bg-gray-700",
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {strength.label}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Terms */}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    By creating an account, you agree to our{" "}
+                    <Link
+                      href="/terms"
+                      className="text-gray-700 dark:text-gray-300 hover:underline"
+                    >
+                      Terms
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      className="text-gray-700 dark:text-gray-300 hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </p>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full h-11 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white font-medium transition-colors"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 dark:border-gray-900/30 border-t-white dark:border-t-gray-900 rounded-full animate-spin" />
+                        Creating account...
+                      </div>
+                    ) : (
+                      "Create account"
+                    )}
+                  </Button>
+                </form>
+              )}
+            </AnimatePresence>
 
             {/* Divider */}
             <div className="relative">
@@ -289,7 +350,10 @@ export default function SignUpPage() {
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
+                type="button"
+                onClick={() => handleSocialLogin("google")}
                 className="h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 font-normal transition-colors"
+                disabled={isLoading}
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                   <path
@@ -313,7 +377,10 @@ export default function SignUpPage() {
               </Button>
               <Button
                 variant="outline"
+                type="button"
+                onClick={() => handleSocialLogin("github")}
                 className="h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 font-normal transition-colors"
+                disabled={isLoading}
               >
                 <svg
                   className="w-4 h-4 mr-2"

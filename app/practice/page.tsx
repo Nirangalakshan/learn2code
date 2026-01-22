@@ -27,7 +27,7 @@ import {
   generateQuestionAction,
   checkAnswerAction,
   getHintAction,
-} from "../api/route";
+} from "../api/questions/route";
 
 type Message = {
   id: string;

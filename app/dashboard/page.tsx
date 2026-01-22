@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   Code2,
   Sparkles,
@@ -10,11 +14,15 @@ import {
   TrendingUp,
   ArrowRight,
   Terminal,
-  Cpu,
+  CodeXml,
+  Trash2,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { LogOut } from "lucide-react";
 
 type SessionCardProps = {
   title: string;
@@ -26,6 +34,80 @@ type SessionCardProps = {
 };
 
 export default function DashboardPage() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [rooms, setRooms] = useState<{ id: string; created_at?: string }[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchRooms = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("created_by", user.id);
+
+      if (data) {
+        setRooms(
+          data.sort(
+            (a, b) =>
+              new Date(b.created_at || 0).getTime() -
+              new Date(a.created_at || 0).getTime(),
+          ),
+        );
+      }
+    };
+    fetchRooms();
+  }, [user]);
+
+  const handleDeleteRoom = async (roomId: string) => {
+    if (!window.confirm("Delete this room?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("rooms").delete().eq("id", roomId);
+    if (!error) {
+      setRooms((prev) => prev.filter((r) => r.id !== roomId));
+    } else {
+      alert("Failed to delete room");
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    if (!user) return;
+    setIsCreatingRoom(true);
+    const roomId = Math.random().toString(36).substring(2, 9);
+    const supabase = createClient();
+
+    try {
+      const { error } = await supabase
+        .from("rooms")
+        .insert([{ id: roomId, created_by: user.id }]);
+
+      if (error) {
+        console.error("Error creating room:", error);
+        alert("Failed to create room: " + error.message);
+        return;
+      }
+
+      router.push(`/room/${roomId}`);
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      alert("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
+
+  const userInitials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+    : user?.email?.substring(0, 2).toUpperCase() || "??";
+
+  const userName =
+    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
       {/* Navbar */}
@@ -55,10 +137,22 @@ export default function DashboardPage() {
             </div>
             <div className="h-4 w-px bg-slate-800 hidden md:block" />
             <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-400">Alexa D.</span>
+              <span className="text-sm text-slate-400 hidden sm:block">
+                {userName}
+              </span>
               <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
-                <span className="text-xs font-bold text-indigo-400">AD</span>
+                <span className="text-xs font-bold text-indigo-400">
+                  {userInitials}
+                </span>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={logout}
+                className="text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -109,7 +203,13 @@ export default function DashboardPage() {
           <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
           <div className="absolute bottom-0 right-20 w-80 h-80 bg-violet-500/10 blur-[80px] rounded-full pointer-events-none" />
           <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden lg:block opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-            <Terminal className="w-64 h-64 text-slate-800" />
+            <Image
+              src="/images/robot.png"
+              alt="Robot"
+              width={300}
+              height={300}
+              className="w-80 h-80 object-contain"
+            />
           </div>
         </section>
 
@@ -184,46 +284,105 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Recommended */}
+          {/* Rooms Management */}
           <div className="space-y-6">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Cpu className="w-5 h-5 text-slate-500" />
-              Recommended for You
+              <Users className="w-5 h-5 text-slate-500" />
+              Your Rooms
             </h2>
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-6">
-              <div className="space-y-2">
-                <Badge className="bg-orange-500/10 text-orange-400 border-0">
-                  Weak Spot Detected
-                </Badge>
-                <h3 className="font-semibold text-lg">Dynamic Programming</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  It looks like you struggled with the last DP problem. Lets
-                  practice memoization techniques.
-                </p>
-              </div>
 
-              <Link href="/practice">
-                <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700">
-                  Start DP Challenge
-                </Button>
-              </Link>
-            </div>
-
+            {/* Create / Join Card */}
             <div className="bg-linear-to-br from-indigo-900/20 to-purple-900/20 border border-indigo-500/10 rounded-2xl p-6 relative overflow-hidden">
               <div className="relative z-10">
                 <h3 className="font-semibold text-lg mb-2">
-                  Join the Weekly Contest
+                  Collaborative Rooms
                 </h3>
                 <p className="text-sm text-slate-400 mb-4">
-                  Compete with others and win exclusive badges.
+                  Create a room, invite friends, and solve problems together in
+                  real-time.
                 </p>
-                <Button
-                  size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white"
-                >
-                  View Details
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleCreateRoom}
+                    disabled={isCreatingRoom}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreatingRoom ? (
+                      <>
+                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create New Room"
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
+                    onClick={() => {
+                      const id = prompt("Enter Room ID:");
+                      if (id) window.location.href = `/room/${id}`;
+                    }}
+                  >
+                    Join Room
+                  </Button>
+                </div>
               </div>
+            </div>
+
+            {/* Recently Created Rooms List */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+                Recently Created
+              </h3>
+              {rooms.length === 0 ? (
+                <div className="text-center p-4 border border-slate-800/50 rounded-xl bg-slate-900/20">
+                  <p className="text-slate-500 text-sm">No rooms found</p>
+                </div>
+              ) : (
+                rooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className="group flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                        <Terminal className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-200 truncate">
+                          {room.id}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {room.created_at
+                            ? new Date(room.created_at).toLocaleDateString()
+                            : "Just now"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <Link href={`/room/${room.id}`}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteRoom(room.id)}
+                        className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-400/10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </section>

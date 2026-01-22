@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Beginner-friendly coding platform for ages 11+.",
 };
 
+import { AuthProvider } from "@/lib/auth-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,7 +28,7 @@ export default function RootLayout({
       className={`${inter.variable} ${outfit.variable} ${jetbrainsMono.variable}`}
     >
       <body className="font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 overflow-x-hidden selection:bg-emerald-500/30">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

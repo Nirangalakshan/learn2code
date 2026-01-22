@@ -165,7 +165,7 @@ const Navbar: React.FC = () => {
         >
           Sign in
         </Link>
-        <Link href="/onboarding">
+        <Link href="/signup">
           <Button className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium rounded-full px-5 h-9 text-sm">
             Get Started <MoveRight className="w-4 h-4 ml-1" />
           </Button>
@@ -184,7 +184,7 @@ const HeroCTA: React.FC = () => {
         your journey with fun, interactive lessons.
       </p>
       <div className="flex flex-col sm:flex-row items-center gap-3">
-        <Link href="/onboarding">
+        <Link href="/signup">
           <Button
             size="lg"
             className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-full px-8 h-12 text-base transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/25"
