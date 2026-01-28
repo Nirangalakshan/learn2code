@@ -27,6 +27,7 @@ import {
   JoinRoomDialog,
   DeleteRoomDialog,
   LogoutDialog,
+  TaskDetailsDialog,
 } from "@/components/dashboard/RoomDialogs";
 
 type SessionCardProps = {
@@ -38,12 +39,21 @@ type SessionCardProps = {
   active?: boolean;
 };
 
+type HistoryItem = {
+  id: string;
+  created_at?: string;
+  generated_task?: {
+    title: string;
+    description: string;
+    starterCode: string;
+    requirements: string[];
+  };
+};
+
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const [rooms, setRooms] = useState<{ id: string; created_at?: string }[]>([]);
-  const [history, setHistory] = useState<{ id: string; created_at?: string }[]>(
-    [],
-  );
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -51,6 +61,11 @@ export default function DashboardPage() {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<"room" | "history">("room");
+  const [taskDetailsOpen, setTaskDetailsOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<
+    HistoryItem["generated_task"] | null
+  >(null);
 
   useEffect(() => {
     if (!user) return;
@@ -93,14 +108,26 @@ export default function DashboardPage() {
     fetchHistory();
   }, [user]);
 
-  const handleDeleteClick = (roomId: string) => {
-    setRoomToDelete(roomId);
+  const handleDeleteClick = (id: string, type: "room" | "history" = "room") => {
+    setRoomToDelete(id);
+    setDeleteType(type);
     setDeleteDialogOpen(true);
+  };
+
+  const handleTaskClick = (task: HistoryItem["generated_task"]) => {
+    if (task) {
+      setSelectedTask(task);
+      setTaskDetailsOpen(true);
+    }
   };
 
   const handleDeleteSuccess = () => {
     if (roomToDelete) {
-      setRooms((prev) => prev.filter((r) => r.id !== roomToDelete));
+      if (deleteType === "room") {
+        setRooms((prev) => prev.filter((r) => r.id !== roomToDelete));
+      } else {
+        setHistory((prev) => prev.filter((h) => h.id !== roomToDelete));
+      }
       setRoomToDelete(null);
     }
   };
@@ -135,9 +162,15 @@ export default function DashboardPage() {
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
           roomId={roomToDelete}
+          type={deleteType}
           onDeleted={handleDeleteSuccess}
         />
       )}
+      <TaskDetailsDialog
+        open={taskDetailsOpen}
+        onOpenChange={setTaskDetailsOpen}
+        task={selectedTask || null}
+      />
 
       {/* Navbar */}
       <nav className="border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
@@ -273,7 +306,7 @@ export default function DashboardPage() {
         {/* Recent Sections similar to Bento Grid */}
         <section className=" gap-8">
           {/* Recent Activity */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 h-[calc(100vh-32rem)] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <History className="w-5 h-5 text-slate-500" />
@@ -293,10 +326,11 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              history.map((history) => (
+              history.map((item) => (
                 <div
-                  key={history.id}
-                  className="group flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all"
+                  key={item.id}
+                  className="group flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+                  onClick={() => handleTaskClick(item.generated_task)}
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
@@ -304,30 +338,21 @@ export default function DashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-200 truncate">
-                        {history.id}
+                        {item.generated_task?.title || "Untitled Task"}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {history.created_at
-                          ? new Date(history.created_at).toLocaleDateString()
+                        {item.created_at
+                          ? new Date(item.created_at).toLocaleDateString()
                           : "Just now"}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <Link href={`/practice/${history.id}`}>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
-                      >
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </Link>
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => handleDeleteClick(history.id)}
+                      onClick={() => handleDeleteClick(item.id, "history")}
                       className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-400/10"
                     >
                       <Trash2 className="w-4 h-4" />

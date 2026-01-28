@@ -26,6 +26,9 @@ import {
   Share2,
   Copy,
   Check,
+  BookOpen,
+  Code2,
+  ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -271,6 +274,7 @@ interface DeleteRoomDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roomId: string;
+  type?: "room" | "history";
   onDeleted?: () => void;
 }
 
@@ -278,6 +282,7 @@ export function DeleteRoomDialog({
   open,
   onOpenChange,
   roomId,
+  type = "room",
   onDeleted,
 }: DeleteRoomDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -287,14 +292,17 @@ export function DeleteRoomDialog({
     const supabase = createClient();
 
     try {
-      const { error } = await supabase.from("rooms").delete().eq("id", roomId);
+      const table = type === "room" ? "rooms" : "practice_arena";
+      const { error } = await supabase.from(table).delete().eq("id", roomId);
 
       if (error) {
-        toast.error("Failed to delete room", { description: error.message });
+        toast.error(`Failed to delete ${type}`, { description: error.message });
         return;
       }
 
-      toast.success("Room deleted successfully");
+      toast.success(
+        `${type === "room" ? "Room" : "History item"} deleted successfully`,
+      );
       onDeleted?.();
       onOpenChange(false);
     } catch {
@@ -312,11 +320,12 @@ export function DeleteRoomDialog({
             <Trash2 className="w-8 h-8 text-white" />
           </div>
           <DialogTitle className="text-2xl font-bold text-center">
-            Delete Room
+            Delete {type === "room" ? "Room" : "History"}
           </DialogTitle>
           <DialogDescription className="text-center text-slate-400">
-            Are you sure you want to delete this room? This action cannot be
-            undone.
+            Are you sure you want to delete this{" "}
+            {type === "room" ? "room" : "practice session"}? This action cannot
+            be undone.
           </DialogDescription>
         </DialogHeader>
 
@@ -326,8 +335,14 @@ export function DeleteRoomDialog({
             <div>
               <p className="text-sm font-medium text-red-300">Warning</p>
               <p className="text-sm text-red-400/80 mt-1">
-                Room <span className="font-mono font-bold">{roomId}</span> and
-                all its questions will be permanently deleted.
+                {type === "room" ? (
+                  <>
+                    Room <span className="font-mono font-bold">{roomId}</span>{" "}
+                    and all its questions will be permanently deleted.
+                  </>
+                ) : (
+                  <>This practice session will be removed from your history.</>
+                )}
               </p>
             </div>
           </div>
@@ -347,7 +362,7 @@ export function DeleteRoomDialog({
             ) : (
               <>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Delete Room
+                Delete {type === "room" ? "Room" : "History"}
               </>
             )}
           </Button>
@@ -593,6 +608,115 @@ export function ShareRoomDialog({
             variant="ghost"
             onClick={() => onOpenChange(false)}
             className="w-full text-slate-400 hover:text-white hover:bg-slate-800"
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Task Details Dialog
+interface TaskDetailsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  task: {
+    title: string;
+    description: string;
+    starterCode?: string;
+    requirements?: string[];
+  } | null;
+}
+
+export function TaskDetailsDialog({
+  open,
+  onOpenChange,
+  task,
+}: TaskDetailsDialogProps) {
+  if (!task) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl bg-slate-900 border-slate-800 text-slate-100 max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <BookOpen className="w-8 h-8 text-white" />
+          </div>
+          <DialogTitle className="text-2xl font-bold text-center">
+            {task.title}
+          </DialogTitle>
+          <DialogDescription className="text-center text-slate-400">
+            Review the details of your generated practice task.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-6 space-y-6">
+          {/* Description */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-indigo-400 font-semibold">
+              <Sparkles className="w-4 h-4" />
+              <span>Task Description</span>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+              <p className="text-slate-300 leading-relaxed">
+                {task.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Requirements */}
+          {task.requirements && task.requirements.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <ListChecks className="w-4 h-4" />
+                <span>Requirements</span>
+              </div>
+              <ul className="grid gap-2">
+                {task.requirements.map((req, index) => (
+                  <li
+                    key={index}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/30 text-sm text-slate-300"
+                  >
+                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    {req}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Starter Code */}
+          {task.starterCode && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-amber-400 font-semibold">
+                <Code2 className="w-4 h-4" />
+                <span>Starter Code</span>
+              </div>
+              <div className="relative group">
+                <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-slate-300 overflow-x-auto">
+                  <code>{task.starterCode}</code>
+                </pre>
+                <button
+                  onClick={() => {
+                    if (task.starterCode) {
+                      navigator.clipboard.writeText(task.starterCode);
+                      toast.success("Code copied to clipboard!");
+                    }
+                  }}
+                  className="absolute top-3 right-3 p-2 rounded-lg bg-slate-800 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-white"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            onClick={() => onOpenChange(false)}
+            className="w-full h-11 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl border border-slate-700 transition-all"
           >
             Close
           </Button>
