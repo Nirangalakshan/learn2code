@@ -28,7 +28,7 @@ async function openRouterRequest(messages: messages[]) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-r1-0528:free",
+          model: "arcee-ai/trinity-large-preview:free",
           messages: messages,
           temperature: 0.7,
           response_format: { type: "json_object" },
@@ -106,18 +106,13 @@ export async function generateQuestionAction(
       },
       { role: "user", content: prompt },
     ]);
-    return JSON.parse(cleanJson(response));
+    // Return the full AI response without parsing
+    return { rawResponse: response };
   } catch (error) {
     console.error("Error generating question:", error);
-    // Fallback mock response if API fails (good for testing/demos without burning credits or if key is invalid)
+    // Fallback mock response if API fails
     return {
-      title: `${difficulty} ${topic} Challenge`,
-      description: `(AI Generation Failed - Using Mock) Write a function to demonstrate ${topic} in ${language}.`,
-      requirements: ["Handle edge cases", "Optimize for time complexity"],
-      starterCode:
-        language === "python"
-          ? "def solution():\n    pass"
-          : "function solution() {\n}",
+      rawResponse: `(AI Generation Failed) Error: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
   }
 }

@@ -7,6 +7,7 @@ import { QuestionPanel, Question } from "@/components/room/QuestionPanel";
 import { Button } from "@/components/ui/button";
 import { Share2, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { ShareRoomDialog } from "@/components/dashboard/RoomDialogs";
 
 export default function RoomPage() {
   const params = useParams();
@@ -20,6 +21,7 @@ export default function RoomPage() {
   );
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const handleQuestionSelect = (q: Question) => {
     setActiveQuestion(q);
@@ -63,13 +65,6 @@ export default function RoomPage() {
     fetchQuestions();
   }, [roomId, supabase]);
 
-  const copyInviteLink = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    // Simple alert if no toast
-    alert("Room link copied to clipboard!");
-  };
-
   return (
     <div className="h-screen w-full bg-background flex flex-col overflow-hidden">
       {/* Top Bar */}
@@ -91,7 +86,11 @@ export default function RoomPage() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button size="sm" variant="outline" onClick={copyInviteLink}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShareDialogOpen(true)}
+          >
             <Share2 className="w-4 h-4 mr-2" />
             Invite Partner
           </Button>
@@ -123,6 +122,13 @@ export default function RoomPage() {
           />
         </section>
       </main>
+
+      {/* Share Room Dialog */}
+      <ShareRoomDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        roomId={roomId}
+      />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -14,15 +13,21 @@ import {
   TrendingUp,
   ArrowRight,
   Terminal,
-  CodeXml,
   Trash2,
   Users,
+  Plus,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut } from "lucide-react";
+import {
+  CreateRoomDialog,
+  JoinRoomDialog,
+  DeleteRoomDialog,
+  LogoutDialog,
+} from "@/components/dashboard/RoomDialogs";
 
 type SessionCardProps = {
   title: string;
@@ -35,9 +40,17 @@ type SessionCardProps = {
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
-  const router = useRouter();
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [rooms, setRooms] = useState<{ id: string; created_at?: string }[]>([]);
+  const [history, setHistory] = useState<{ id: string; created_at?: string }[]>(
+    [],
+  );
+
+  // Dialog states
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -59,42 +72,36 @@ export default function DashboardPage() {
       }
     };
     fetchRooms();
+
+    const fetchHistory = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("practice_arena")
+        .select("*")
+        .eq("created_by", user.id);
+
+      if (data) {
+        setHistory(
+          data.sort(
+            (a, b) =>
+              new Date(b.created_at || 0).getTime() -
+              new Date(a.created_at || 0).getTime(),
+          ),
+        );
+      }
+    };
+    fetchHistory();
   }, [user]);
 
-  const handleDeleteRoom = async (roomId: string) => {
-    if (!window.confirm("Delete this room?")) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("rooms").delete().eq("id", roomId);
-    if (!error) {
-      setRooms((prev) => prev.filter((r) => r.id !== roomId));
-    } else {
-      alert("Failed to delete room");
-    }
+  const handleDeleteClick = (roomId: string) => {
+    setRoomToDelete(roomId);
+    setDeleteDialogOpen(true);
   };
 
-  const handleCreateRoom = async () => {
-    if (!user) return;
-    setIsCreatingRoom(true);
-    const roomId = Math.random().toString(36).substring(2, 9);
-    const supabase = createClient();
-
-    try {
-      const { error } = await supabase
-        .from("rooms")
-        .insert([{ id: roomId, created_by: user.id }]);
-
-      if (error) {
-        console.error("Error creating room:", error);
-        alert("Failed to create room: " + error.message);
-        return;
-      }
-
-      router.push(`/room/${roomId}`);
-    } catch (error) {
-      console.error("Unexpected error:", error);
-      alert("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsCreatingRoom(false);
+  const handleDeleteSuccess = () => {
+    if (roomToDelete) {
+      setRooms((prev) => prev.filter((r) => r.id !== roomToDelete));
+      setRoomToDelete(null);
     }
   };
 
@@ -110,6 +117,28 @@ export default function DashboardPage() {
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
+      {/* Dialogs */}
+      <CreateRoomDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        userId={user?.id || ""}
+      />
+      <JoinRoomDialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen} />
+      <LogoutDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        onLogout={logout}
+        userName={userName}
+      />
+      {roomToDelete && (
+        <DeleteRoomDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          roomId={roomToDelete}
+          onDeleted={handleDeleteSuccess}
+        />
+      )}
+
       {/* Navbar */}
       <nav className="border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -148,7 +177,7 @@ export default function DashboardPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={logout}
+                onClick={() => setLogoutDialogOpen(true)}
                 className="text-slate-400 hover:text-white hover:bg-slate-800"
               >
                 <LogOut className="w-4 h-4" />
@@ -172,7 +201,7 @@ export default function DashboardPage() {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Ready to master your <br />
               <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-violet-400">
-                next technical interview?
+                Programming Skills?
               </span>
             </h1>
             <p className="text-lg text-slate-400 max-w-lg leading-relaxed">
@@ -202,7 +231,7 @@ export default function DashboardPage() {
           {/* Decorative Background Elements */}
           <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
           <div className="absolute bottom-0 right-20 w-80 h-80 bg-violet-500/10 blur-[80px] rounded-full pointer-events-none" />
-          <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden lg:block opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+          <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden lg:block opacity-50 hover:grayscale transition-all duration-500">
             <Image
               src="/images/robot.png"
               alt="Robot"
@@ -242,7 +271,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Recent Sections similar to Bento Grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <section className=" gap-8">
           {/* Recent Activity */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
@@ -257,35 +286,60 @@ export default function DashboardPage() {
                 View All
               </Button>
             </div>
+            {history.length === 0 ? (
+              <div className="text-center p-4 border border-slate-800/50 rounded-xl bg-slate-900/20">
+                <p className="text-slate-500 text-sm">
+                  No AI generated tasks found!
+                </p>
+              </div>
+            ) : (
+              history.map((history) => (
+                <div
+                  key={history.id}
+                  className="group flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                      <Terminal className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-200 truncate">
+                        {history.id}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {history.created_at
+                          ? new Date(history.created_at).toLocaleDateString()
+                          : "Just now"}
+                      </p>
+                    </div>
+                  </div>
 
-            <div className="space-y-4">
-              <SessionCard
-                title="React Hooks Implementation"
-                lang="TypeScript"
-                difficulty="Medium"
-                score="95/100"
-                time="2h ago"
-              />
-              <SessionCard
-                title="Binary Tree Traversal"
-                lang="Python"
-                difficulty="Hard"
-                score="In Progress"
-                time="5h ago"
-                active
-              />
-              <SessionCard
-                title="Array Manipulation Basics"
-                lang="JavaScript"
-                difficulty="Easy"
-                score="100/100"
-                time="Yesterday"
-              />
-            </div>
+                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <Link href={`/practice/${history.id}`}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleDeleteClick(history.id)}
+                      className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-400/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Rooms Management */}
-          <div className="space-y-6">
+          <div className="space-y-6 mt-8">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <Users className="w-5 h-5 text-slate-500" />
               Your Rooms
@@ -303,27 +357,18 @@ export default function DashboardPage() {
                 </p>
                 <div className="space-y-2">
                   <Button
-                    onClick={handleCreateRoom}
-                    disabled={isCreatingRoom}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setCreateDialogOpen(true)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white"
                   >
-                    {isCreatingRoom ? (
-                      <>
-                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create New Room"
-                    )}
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create New Room
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
-                    onClick={() => {
-                      const id = prompt("Enter Room ID:");
-                      if (id) window.location.href = `/room/${id}`;
-                    }}
+                    onClick={() => setJoinDialogOpen(true)}
                   >
+                    <Users className="w-4 h-4 mr-2" />
                     Join Room
                   </Button>
                 </div>
@@ -374,7 +419,7 @@ export default function DashboardPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => handleDeleteRoom(room.id)}
+                        onClick={() => handleDeleteClick(room.id)}
                         className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-400/10"
                       >
                         <Trash2 className="w-4 h-4" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -17,6 +18,8 @@ import {
   HelpCircle,
   Trophy,
   Zap,
+  Terminal as TerminalIcon,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +31,7 @@ import {
   checkAnswerAction,
   getHintAction,
 } from "../api/questions/route";
+import { createClient } from "@/lib/supabase/client";
 
 type Message = {
   id: string;
@@ -103,6 +107,10 @@ export default function PracticeArena() {
   const [isChecking, setIsChecking] = useState(false);
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [showDiffSelector, setShowDiffSelector] = useState(false);
+  const [output, setOutput] = useState<string>("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -128,21 +136,68 @@ export default function PracticeArena() {
     ]);
 
     try {
-      const question = await generateQuestionAction(
+      const result = await generateQuestionAction(
         topic,
         difficulty.id,
         language.name,
       );
-      setActiveQuestion(question);
-      setCode(question.starterCode);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "ai",
-          content: `Here's your challenge: ${question.title}. Good luck!`,
-        },
-      ]);
+
+      // Attempt to parse the JSON from the AI response
+      try {
+        // Simple extraction of JSON from potential markdown blocks
+        const jsonMatch = result.rawResponse.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : result.rawResponse;
+        const parsed = JSON.parse(jsonStr);
+
+        setActiveQuestion(parsed);
+        setCode(parsed.starterCode || "");
+
+        // Save to Supabase
+        try {
+          const supabase = createClient();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
+          if (user) {
+            const { data, error } = await supabase
+              .from("practice_arena")
+              .insert({
+                created_by: user.id,
+                generated_task: parsed,
+              })
+              .select()
+              .single();
+
+            if (data && !error) {
+              setSessionId(data.id);
+            } else if (error) {
+              console.error("Supabase Error:", error);
+            }
+          }
+        } catch (supabaseErr) {
+          console.error("Failed to save session to Supabase:", supabaseErr);
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "ai",
+            content: `Great! I've prepared a ${difficulty.id} level problem on "${topic}" for you. You can find the description and constraints on the left. Good luck!`,
+          },
+        ]);
+      } catch (e) {
+        // Fallback if parsing fails - just show the raw response
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "ai",
+            content: result.rawResponse,
+          },
+        ]);
+      }
     } catch (error) {
       setMessages((prev) => [
         ...prev,
@@ -156,6 +211,52 @@ export default function PracticeArena() {
       ]);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRunCode = async () => {
+    setIsRunning(true);
+    setIsTerminalOpen(true);
+    setOutput("Running code...\n");
+
+    try {
+      // Map language names to Piston language identifiers
+      const langMapping: Record<string, string> = {
+        python: "python",
+        javascript: "javascript",
+        typescript: "typescript",
+        react: "typescript",
+        java: "java",
+        cpp: "cpp",
+        c: "c",
+        "typescript-react": "typescript",
+      };
+
+      const pistonLang = langMapping[language.id] || language.id;
+
+      const response = await fetch("https://emkc.org/api/v2/piston/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: pistonLang,
+          version: "*",
+          files: [{ content: code }],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.run) {
+        setOutput(
+          data.run.output || "Program executed successfully with no output.",
+        );
+      } else {
+        setOutput("Error: " + (data.message || "Unknown execution error"));
+      }
+    } catch (error) {
+      setOutput("Execution failed: " + String(error));
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -201,6 +302,32 @@ export default function PracticeArena() {
             type: "hint",
           },
         ]);
+      }
+
+      // Save to Supabase
+      if (sessionId) {
+        try {
+          const supabase = createClient();
+          const { error } = await supabase
+            .from("practice_arena")
+            .update({
+              submit_solution: {
+                code,
+                language: language.id,
+                passed: result.passed,
+                feedback: result.feedback,
+                submitted_at: new Date().toISOString(),
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", sessionId);
+
+          if (error) {
+            console.error("Supabase Update Error:", error);
+          }
+        } catch (supabaseErr) {
+          console.error("Failed to update session in Supabase:", supabaseErr);
+        }
       }
     } catch (error) {
       setMessages((prev) => [
@@ -269,7 +396,7 @@ export default function PracticeArena() {
             </div>
             <div>
               <h1 className="font-bold text-white tracking-tight text-lg">
-                Interview Arena
+                Practice Arena
               </h1>
             </div>
             <Badge
@@ -329,9 +456,11 @@ export default function PracticeArena() {
               onClick={() => setShowLangSelector(!showLangSelector)}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg hover:border-slate-600 hover:bg-slate-700/50 transition-all text-sm font-medium text-slate-200"
             >
-              <img
+              <Image
                 src={language.icon}
                 alt={language.name}
+                width={20}
+                height={20}
                 className="w-5 h-5 object-contain"
               />
               <span className="hidden sm:inline">{language.name}</span>
@@ -360,9 +489,11 @@ export default function PracticeArena() {
                           : "text-slate-300 hover:bg-slate-800",
                       )}
                     >
-                      <img
+                      <Image
                         src={lang.icon}
                         alt={lang.name}
+                        width={20}
+                        height={20}
                         className="w-5 h-5 object-contain"
                       />
                       {lang.name}
@@ -571,9 +702,11 @@ export default function PracticeArena() {
           <div className="h-10 bg-[#1e1e1e] border-b border-[#2b2b2b] flex items-center justify-between px-4 select-none">
             <div className="flex items-center">
               <div className="flex items-center gap-2 px-4 py-2 bg-[#1e1e1e] border-t-2 border-indigo-500 text-slate-300 text-xs font-medium">
-                <img
+                <Image
                   src={language.icon}
                   alt={language.id}
+                  width={16}
+                  height={16}
                   className="w-4 h-4 object-contain"
                 />
                 <span>
@@ -593,6 +726,18 @@ export default function PracticeArena() {
               </div>
             </div>
             <div className="flex items-center gap-3 text-xs text-slate-500">
+              <button
+                onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded transition-colors",
+                  isTerminalOpen
+                    ? "bg-indigo-500/10 text-indigo-400"
+                    : "hover:bg-slate-800 text-slate-500",
+                )}
+              >
+                <TerminalIcon className="w-3.5 h-3.5" />
+                <span>Terminal</span>
+              </button>
               <span className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500/50"></div>{" "}
                 Auto-saved
@@ -600,29 +745,96 @@ export default function PracticeArena() {
             </div>
           </div>
 
-          <div className="flex-1 relative">
-            <Editor
-              height="100%"
-              language={language.id}
-              theme="vs-dark"
-              value={code}
-              onChange={(value) => setCode(value || "")}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 15,
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                padding: { top: 20, bottom: 20 },
-                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                smoothScrolling: true,
-                cursorBlinking: "expand",
-                fontLigatures: true,
-              }}
-            />
+          <div className="flex-1 flex flex-col relative overflow-hidden">
+            <div className="flex-1 min-h-0">
+              <Editor
+                height="100%"
+                language={language.id}
+                theme="vs-dark"
+                value={code}
+                onChange={(value) => setCode(value || "")}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 15,
+                  lineNumbers: "on",
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 20, bottom: 20 },
+                  fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                  smoothScrolling: true,
+                  cursorBlinking: "expand",
+                  fontLigatures: true,
+                }}
+              />
+            </div>
+
+            {/* Terminal Area */}
+            <AnimatePresence>
+              {isTerminalOpen && (
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: "30%" }}
+                  exit={{ height: 0 }}
+                  className="bg-[#1e1e1e] border-t border-[#2b2b2b] flex flex-col z-20"
+                >
+                  <div className="h-9 min-h-9 flex items-center justify-between px-4 bg-[#252526] border-b border-[#2b2b2b]">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      <TerminalIcon className="w-3.5 h-3.5" />
+                      Output Terminal
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setOutput("")}
+                        className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors uppercase font-bold"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={() => setIsTerminalOpen(false)}
+                        className="text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 p-4 font-mono text-sm overflow-auto text-slate-300 whitespace-pre-wrap selection:bg-indigo-500/30">
+                    {output || (
+                      <span className="text-slate-600 italic">
+                        Run your code to see output...
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Run / Submit Floating Bar */}
-            <div className="absolute bottom-8 right-8 flex items-center gap-3 z-10">
+            <div className="absolute bottom-8 right-8 flex items-center gap-3 z-30">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  onClick={handleRunCode}
+                  disabled={isRunning || isChecking}
+                  className="h-12 px-6 rounded-full bg-slate-800/90 backdrop-blur hover:bg-slate-700 text-white border border-slate-700 shadow-2xl transition-all"
+                >
+                  {isRunning ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin text-indigo-400" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5 mr-2 text-green-400 fill-green-400" />
+                      Run Code
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -633,8 +845,8 @@ export default function PracticeArena() {
                   disabled={isChecking || !activeQuestion}
                   className={cn(
                     "h-12 px-8 rounded-full shadow-2xl transition-all duration-300 font-semibold tracking-wide",
-                    isChecking
-                      ? "bg-slate-700 cursor-not-allowed text-slate-400"
+                    isChecking || !activeQuestion
+                      ? "bg-slate-700 cursor-not-allowed text-white"
                       : "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-indigo-500/25 border border-indigo-400/20",
                   )}
                 >
@@ -645,8 +857,8 @@ export default function PracticeArena() {
                     </>
                   ) : (
                     <>
-                      <Play className="w-5 h-5 mr-2 fill-current" />
-                      Run & Submit
+                      <Zap className="w-5 h-5 mr-2 fill-current" />
+                      Submit Solution
                     </>
                   )}
                 </Button>
