@@ -30,7 +30,7 @@ import {
   generateQuestionAction,
   checkAnswerAction,
   getHintAction,
-} from "../api/questions/route";
+} from "../api/questions/actions";
 import { createClient } from "@/lib/supabase/client";
 
 type Message = {
