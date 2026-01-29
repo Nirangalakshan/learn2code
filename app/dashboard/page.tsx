@@ -48,6 +48,13 @@ type HistoryItem = {
     starterCode: string;
     requirements: string[];
   };
+  submit_solution?: {
+    language: string;
+    code: string;
+    passed: boolean;
+    feedback: string;
+    submitted_at: string;
+  };
 };
 
 export default function DashboardPage() {
@@ -65,6 +72,9 @@ export default function DashboardPage() {
   const [taskDetailsOpen, setTaskDetailsOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<
     HistoryItem["generated_task"] | null
+  >(null);
+  const [selectedSolution, setSelectedSolution] = useState<
+    HistoryItem["submit_solution"] | null
   >(null);
 
   useEffect(() => {
@@ -114,9 +124,10 @@ export default function DashboardPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleTaskClick = (task: HistoryItem["generated_task"]) => {
-    if (task) {
-      setSelectedTask(task);
+  const handleTaskClick = (item: HistoryItem) => {
+    if (item.generated_task) {
+      setSelectedTask(item.generated_task);
+      setSelectedSolution(item.submit_solution || null);
       setTaskDetailsOpen(true);
     }
   };
@@ -170,6 +181,7 @@ export default function DashboardPage() {
         open={taskDetailsOpen}
         onOpenChange={setTaskDetailsOpen}
         task={selectedTask || null}
+        solution={selectedSolution || null}
       />
 
       {/* Navbar */}
@@ -330,7 +342,7 @@ export default function DashboardPage() {
                 <div
                   key={item.id}
                   className="group flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
-                  onClick={() => handleTaskClick(item.generated_task)}
+                  onClick={() => handleTaskClick(item)}
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">

@@ -29,8 +29,11 @@ import {
   BookOpen,
   Code2,
   ListChecks,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 
 // Create Room Dialog
@@ -627,12 +630,20 @@ interface TaskDetailsDialogProps {
     starterCode?: string;
     requirements?: string[];
   } | null;
+  solution?: {
+    language: string;
+    code: string;
+    passed: boolean;
+    feedback: string;
+    submitted_at: string;
+  } | null;
 }
 
 export function TaskDetailsDialog({
   open,
   onOpenChange,
   task,
+  solution,
 }: TaskDetailsDialogProps) {
   if (!task) return null;
 
@@ -673,7 +684,7 @@ export function TaskDetailsDialog({
                 <span>Requirements</span>
               </div>
               <ul className="grid gap-2">
-                {task.requirements.map((req, index) => (
+                {task.requirements.map((req: string, index: number) => (
                   <li
                     key={index}
                     className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/30 text-sm text-slate-300"
@@ -708,6 +719,77 @@ export function TaskDetailsDialog({
                 >
                   <Copy className="w-4 h-4" />
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Submitted Solution */}
+          {solution && (
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-indigo-400 font-semibold">
+                  <Terminal className="w-4 h-4" />
+                  <span>Your Last Submission</span>
+                </div>
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold",
+                    solution.passed
+                      ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                      : "bg-red-500/10 text-red-400 border border-red-500/20",
+                  )}
+                >
+                  {solution.passed ? (
+                    <>
+                      <Check className="w-3 h-3" /> PASSED
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-3 h-3" /> FAILED
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="relative group">
+                  <div className="absolute top-3 right-3 flex gap-2">
+                    <Badge
+                      variant="outline"
+                      className="bg-slate-900/50 border-slate-700 text-slate-400 text-[10px] uppercase"
+                    >
+                      {solution.language}
+                    </Badge>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(solution.code);
+                        toast.success("Solution copied!");
+                      }}
+                      className="p-2 rounded-lg bg-slate-800 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-white"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-slate-300 overflow-x-auto">
+                    <code>{solution.code}</code>
+                  </pre>
+                </div>
+
+                {solution.feedback && (
+                  <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                    <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">
+                      Feedback
+                    </p>
+                    <p className="text-sm text-slate-300 leading-relaxed italic">
+                      &quot;{solution.feedback}&quot;
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-slate-500 text-right">
+                  Submitted on{" "}
+                  {new Date(solution.submitted_at).toLocaleString()}
+                </p>
               </div>
             </div>
           )}
