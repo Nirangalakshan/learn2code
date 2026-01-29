@@ -8,15 +8,15 @@ import {
   Code2,
   Sparkles,
   Zap,
-  Trophy,
   History,
-  TrendingUp,
   ArrowRight,
   Terminal,
   Trash2,
   Users,
   Plus,
   LogOut,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -241,7 +241,7 @@ export default function DashboardPage() {
               className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-3 py-1"
             >
               <Sparkles className="w-3 h-3 mr-2" />
-              New: AI Interviewer 2.0
+              New: AI Coding Master 1.0
             </Badge>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Ready to master your <br />
@@ -290,28 +290,32 @@ export default function DashboardPage() {
         {/* Stats Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
-            label="Current Streak"
-            value="12 Days"
+            label="Practice Rooms"
+            value={rooms.length.toString()}
+            icon={<Users className="w-5 h-5 text-indigo-400" />}
+            trend="Active coding spaces"
+          />
+          <StatCard
+            label="AI Tasks"
+            value={history.length.toString()}
             icon={<Zap className="w-5 h-5 text-yellow-400" />}
-            trend="+2 from last week"
+            trend="Generated sessions"
           />
           <StatCard
-            label="Questions Solved"
-            value="143"
-            icon={<Code2 className="w-5 h-5 text-blue-400" />}
-            trend="Top 5% of users"
+            label="Passed Tasks"
+            value={history
+              .filter((h) => h.submit_solution?.passed)
+              .length.toString()}
+            icon={<CheckCircle2 className="w-5 h-5 text-green-400" />}
+            trend="Successful evaluations"
           />
           <StatCard
-            label="XP Earned"
-            value="12,450"
-            icon={<Trophy className="w-5 h-5 text-purple-400" />}
-            trend="Level 15 Master"
-          />
-          <StatCard
-            label="Accuracy Rate"
-            value="87%"
-            icon={<TrendingUp className="w-5 h-5 text-green-400" />}
-            trend="+1.5% improvement"
+            label="Failed Tasks"
+            value={history
+              .filter((h) => h.submit_solution && !h.submit_solution.passed)
+              .length.toString()}
+            icon={<XCircle className="w-5 h-5 text-red-400" />}
+            trend="Needs more practice"
           />
         </section>
 
